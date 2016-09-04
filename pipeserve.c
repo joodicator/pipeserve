@@ -50,12 +50,12 @@
 #include "buffer.h"
 
 #define UNIX_PATH_MAX 108
-#define LAMBDA(TYPE, BODY) ({ TYPE __lambda__ BODY; &__lambda__; })
 
 #define SIGRT_IO SIGRTMIN
 #define BACKLOG 16
 
 static int check(int, char *);
+static int check_w(int, char *);
 static void report(const char *format, ...);
 
 static void setup_io(int);
@@ -65,6 +65,8 @@ static void server_io(void);
 static void client_io(int);
 static void stdin_io(void);
 static void child_io(int);
+
+static void atexit_unlink_socket(void);
 
 static char *program_name;
 static char *socket_name;
@@ -138,7 +140,7 @@ int main(int argc, char **argv, char *envp[]) {
     server = check(socket(AF_UNIX, SOCK_STREAM, 0), "socket()");
     check(bind(server, (struct sockaddr *) &addr, sizeof(struct sockaddr_un)),
           "bind()");
-    atexit(LAMBDA(void, (void) { unlink(socket_name); }));
+    atexit(&atexit_unlink_socket);
     setup_io(server);
     check(listen(server, BACKLOG), "listen()");
 
@@ -150,6 +152,10 @@ int main(int argc, char **argv, char *envp[]) {
     check(waitid(P_PID, child, &info, WEXITED), "waitid()");
     report("%s exited with status %d\n", basename(argv[2]), info.si_status);
     return info.si_status;
+}
+
+static void atexit_unlink_socket(void) {
+    check_w(unlink(socket_name), "unlink()");
 }
 
 static void setup_io(int fd) {
@@ -247,6 +253,11 @@ static void child_io(int fd) {
 
 static int check (int result, char *source) {
     if (result == -1) err(EXIT_FAILURE, source);
+    return result;
+}
+
+static int check_w (int result, char *source) {
+    if (result == -1) warn(source);
     return result;
 }
 
