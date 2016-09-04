@@ -105,9 +105,11 @@ int main(int argc, char **argv, char *envp[]) {
     check(pipe(child_stdout), "pipe()");
     check(pipe(child_stderr), "pipe()");
 
+    pid_t pipeserve_pid = getpid();
     child = check(fork(), "fork()");
     if (child == 0) {
         prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0);
+        if (getppid() != pipeserve_pid) exit(1);
         check(dup2(child_stdin[0], STDIN_FILENO), "dup2()");
         check(dup2(child_stdout[1], STDOUT_FILENO), "dup2()");
         check(dup2(child_stderr[1], STDERR_FILENO), "dup2()");
