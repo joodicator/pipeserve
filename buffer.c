@@ -80,10 +80,13 @@ ssize_t buffer_readline_r(int fd, char **line, size_t *rsize, char **rdata ) {
 void buffer_clear(int fd) {
     plist head = { NULL, buffers };
     for (plist *prev = &head; prev->tail != NULL; prev = prev->tail) {
-        buffer_t *buffer = prev->tail->head;
-        if (buffer->fd != fd) continue;
-        prev->tail = prev->tail->tail;
-        free(buffer);
+        plist *node = prev->tail;
+        if (fd == ((buffer_t *)node->head)->fd) {
+            prev->tail = node->tail;
+            free(node->head);
+            free(node);
+            break;
+        }
     }
     buffers = head.tail;
 }
